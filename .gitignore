@@ -119,3 +119,6 @@ dist
 dump.rdb
 # Local Netlify folder
 .netlify
+
+#mac files
+.DS_Store
