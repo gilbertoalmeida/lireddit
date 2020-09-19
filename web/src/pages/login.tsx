@@ -3,26 +3,25 @@ import { Formik, Form } from "formik";
 import { Box, Button } from "@chakra-ui/core";
 import { Wrapper } from "../components/Wrapper";
 import { InputField } from "../components/InputField";
-import { useRegisterMutation } from "../generated/graphql";
+import { useLoginMutation } from "../generated/graphql";
 import { toErrorMap } from "../utils/toErrorMap";
 import { useRouter } from "next/router";
 
-interface registerProps {}
+// interface loginProps {}
 
-const Register: React.FC<registerProps> = ({}) => {
-  const [, register] = useRegisterMutation(); //the name register inside the [] is the name we are choosing to call this mutation inside the onSubmit
+const Login: React.FC<{}> = ({}) => {
+  const [, login] = useLoginMutation(); //the name login inside the [] is the name we are choosing to call this mutation inside the onSubmit
   const router = useRouter();
   return (
     <Wrapper variant="small">
       <Formik
         initialValues={{ username: "", password: "" }}
         onSubmit={async (values, { setErrors }) => {
-          const response = await register(values);
-
-          if (response.data && response.data.register.errors) {
-            console.log(response.data.register.errors);
-            setErrors(toErrorMap(response.data.register.errors));
-          } else if (response.data && response.data.register.user) {
+          const response = await login({ options: values }); //we pass this options object, different than the register, because we did the types for generations differently. Check graphql documents where I put the mutations for gen of types
+          if (response.data && response.data.login.errors) {
+            console.log("oi");
+            setErrors(toErrorMap(response.data.login.errors));
+          } else if (response.data && response.data.login.user) {
             router.push("/");
           } else {
             // I created this error for the case that response.data is undefined, which I don't thing will happen, but if it does I want the user to see something, even if it's a general message like server error
@@ -53,7 +52,7 @@ const Register: React.FC<registerProps> = ({}) => {
               isLoading={isSubmitting}
               variantColor="teal"
             >
-              register
+              login
             </Button>
           </Form>
         )}
@@ -62,4 +61,4 @@ const Register: React.FC<registerProps> = ({}) => {
   );
 };
 
-export default Register;
+export default Login;
