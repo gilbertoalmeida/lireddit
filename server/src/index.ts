@@ -12,6 +12,7 @@ import { UserResolver } from "./resolvers/user";
 import redis from "redis";
 import session from "express-session";
 import connectRedis from "connect-redis";
+import cors from "cors";
 
 const main = async () => {
   const orm = await MikroORM.init(microConfig);
@@ -21,6 +22,13 @@ const main = async () => {
 
   const RedisStore = connectRedis(session);
   const redisClient = redis.createClient();
+
+  app.use(
+    cors({
+      origin: "http://localhost:3000",
+      credentials: true
+    })
+  );
 
   //this order is important. The session middleware will run before the apollo one (which needs the first one)
   app.use(
@@ -55,7 +63,7 @@ const main = async () => {
     })
   });
 
-  apolloServer.applyMiddleware({ app });
+  apolloServer.applyMiddleware({ app, cors: false }); //turning the default cors of appolo to false, we add our own
 
   app.listen(4000, () => {
     console.log("server started on localhost:4000");
