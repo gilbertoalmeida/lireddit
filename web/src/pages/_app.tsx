@@ -7,7 +7,8 @@ import {
   Query,
   LoginMutation,
   MeQuery,
-  RegisterMutation
+  RegisterMutation,
+  LogoutMutation
 } from "../generated/graphql";
 
 function betterUpdateQuery<Result, Query>(
@@ -30,6 +31,15 @@ const client = createClient({
       updates: {
         Mutation: {
           //These things will run whenever the mutations cited here run. With the intent of updating the cache and avoiding things as, user being kept visually not logged in by the behavior of the ui, because urql didn#t update the cache by itself.
+
+          logout: (_result, args, cache, info) => {
+            betterUpdateQuery<LogoutMutation, MeQuery>( //updating the MeQuery to show me:null, when Logout Mutation runs.
+              cache,
+              { query: MeDocument },
+              _result,
+              () => ({ me: null })
+            );
+          },
 
           login: (_result, args, cache, info) => {
             betterUpdateQuery<LoginMutation, MeQuery>( //updating the MeQuery, when LoginMutation runs, and putting the result.login.user there

@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import "dotenv/config";
 import { MikroORM } from "@mikro-orm/core";
-import { __prod__ } from "./constants";
+import { __prod__, COOKIE_NAME } from "./constants";
 import microConfig from "./mikro-orm.config";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
@@ -33,7 +33,7 @@ const main = async () => {
   //this order is important. The session middleware will run before the apollo one (which needs the first one)
   app.use(
     session({
-      name: "qid", // the name of our cookie
+      name: COOKIE_NAME, // the name of our cookie
       store: new RedisStore({
         client: redisClient,
         disableTouch: true // this would reset the time limit (of something that is stored in redis) with every touch (action) of the user. We are disabling to make less requests for now. Also, I guess he wants to use the approach that he will actively remove the session when he wants. So all this with ttl and touch is useless.
