@@ -11,6 +11,7 @@ import {
 import { MyContext } from "../types";
 import { User } from "../entities/User";
 import argon2 from "argon2";
+import { EntityManager } from "@mikro-orm/postgresql";
 
 // instead of heaving a lot of Args in the mutation, I can have only one and pass this class
 @InputType()
@@ -80,12 +81,19 @@ export class UserResolver {
     }
 
     const hashedPassword = await argon2.hash(options.password);
-    const user = em.create(User, {
-      username: options.username,
-      password: hashedPassword
-    });
+    let user;
     try {
-      await em.persistAndFlush(user);
+      const result = await (em as EntityManager)
+        .createQueryBuilder(User)
+        .getKnexQuery()
+        .insert({
+          username: options.username,
+          password: hashedPassword,
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .returning("*");
+      user = result[0];
     } catch (err) {
       // these are the errors that the database will throw back if persist and flush fails for some reason.
       if (err.code === "23505") {
