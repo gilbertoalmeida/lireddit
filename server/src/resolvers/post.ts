@@ -5,7 +5,9 @@ import { MyContext } from "src/types";
 @Resolver()
 export class PostResolver {
   @Query(() => [Post])
-  posts(@Ctx() { em }: MyContext) {
+  async posts(@Ctx() { em }: MyContext) {
+    // await sleep(3000);
+    // sleep function is in Utils of src
     return em.find(Post, {});
   }
 
