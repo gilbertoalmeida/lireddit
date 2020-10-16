@@ -17,9 +17,9 @@ const Login: React.FC<{}> = ({}) => {
   return (
     <Wrapper variant="small">
       <Formik
-        initialValues={{ username: "", password: "" }}
+        initialValues={{ usernameOrEmail: "", password: "" }}
         onSubmit={async (values, { setErrors }) => {
-          const response = await login({ options: values }); //we pass this options object, different than the register, because we did the types for generations differently. Check graphql documents where I put the mutations for gen of types
+          const response = await login(values);
           if (response.data && response.data.login.errors) {
             console.log("oi");
             setErrors(toErrorMap(response.data.login.errors));
@@ -36,9 +36,9 @@ const Login: React.FC<{}> = ({}) => {
         {({ isSubmitting }) => (
           <Form>
             <InputField
-              name="username"
-              placeholder="username"
-              label="Username"
+              name="usernameOrEmail"
+              placeholder="username or email"
+              label="Username or Email"
             />
             <Box mt={4}>
               <InputField
