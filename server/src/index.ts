@@ -9,7 +9,7 @@ import { buildSchema } from "type-graphql";
 import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
-import redis from "redis";
+import Redis from "ioredis";
 import session from "express-session";
 import connectRedis from "connect-redis";
 import cors from "cors";
@@ -22,7 +22,7 @@ const main = async () => {
   const app = express();
 
   const RedisStore = connectRedis(session);
-  const redisClient = redis.createClient();
+  const redis = new Redis();
 
   app.use(
     cors({
@@ -36,7 +36,7 @@ const main = async () => {
     session({
       name: COOKIE_NAME, // the name of our cookie
       store: new RedisStore({
-        client: redisClient,
+        client: redis,
         disableTouch: true // this would reset the time limit (of something that is stored in redis) with every touch (action) of the user. We are disabling to make less requests for now. Also, I guess he wants to use the approach that he will actively remove the session when he wants. So all this with ttl and touch is useless.
       }),
       cookie: {
@@ -57,10 +57,12 @@ const main = async () => {
       // validate: false
     }),
     context: ({ req, res }) => ({
-      //context is an object available to all resolvers. I need to pass the orm, so that the resolvers have access to the database
+      //context is an object available to all resolvers. I need to pass the orm, so that the resolvers have access to the database. Everything I pass here is available to the resolvers.
+      //If I add things here, I have to update server/src/types.ts
       em: orm.em, // em has everything we need.
       req,
-      res
+      res,
+      redis
     })
   });
 

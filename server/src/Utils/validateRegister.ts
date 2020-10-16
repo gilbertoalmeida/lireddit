@@ -28,6 +28,7 @@ export const validateRegister = (options: UsernamePasswordInput) => {
     ];
   }
 
+  //this check is also in the changePassword mutation. change both together, or abstract
   if (options.password.length <= 3) {
     return [
       {
