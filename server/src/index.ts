@@ -1,8 +1,6 @@
 import "reflect-metadata";
 import "dotenv/config";
-import { MikroORM } from "@mikro-orm/core";
 import { __prod__, COOKIE_NAME } from "./constants";
-import microConfig from "./mikro-orm.config";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
 import { buildSchema } from "type-graphql";
@@ -13,11 +11,20 @@ import Redis from "ioredis";
 import session from "express-session";
 import connectRedis from "connect-redis";
 import cors from "cors";
+import { createConnection } from "typeorm";
+import { Post } from "./entities/Post";
+import { User } from "./entities/User";
 
 const main = async () => {
-  const orm = await MikroORM.init(microConfig);
-  // await orm.em.nativeDelete(User, {}); // I used this to delete all users from the database
-  await orm.getMigrator().up();
+  const conn = await createConnection({
+    type: "postgres",
+    database: "lireddit2",
+    username: "postgres",
+    password: "postgres",
+    logging: true,
+    synchronize: true, //creates the tables automaticaly and you don't have to run a migration
+    entities: [Post, User]
+  });
 
   const app = express();
 
@@ -57,9 +64,8 @@ const main = async () => {
       // validate: false
     }),
     context: ({ req, res }) => ({
-      //context is an object available to all resolvers. I need to pass the orm, so that the resolvers have access to the database. Everything I pass here is available to the resolvers.
+      //context is an object available to all resolvers. Everything I pass here is available to the resolvers.
       //If I add things here, I have to update server/src/types.ts
-      em: orm.em, // em has everything we need.
       req,
       res,
       redis

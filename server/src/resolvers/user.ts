@@ -10,12 +10,12 @@ import {
 import { MyContext } from "../types";
 import { User } from "../entities/User";
 import argon2 from "argon2";
-import { EntityManager } from "@mikro-orm/postgresql";
 import { COOKIE_NAME, FORGET_PASSWORD_PREFIX } from "../constants";
 import { UsernamePasswordInput } from "./UsernamePasswordInput";
 import { validateRegister } from "../Utils/validateRegister";
 import { sendEmail } from "../Utils/sendEmail";
 import { v4 } from "uuid";
+import { getConnection } from "typeorm";
 
 @ObjectType()
 class FieldError {
@@ -41,7 +41,7 @@ export class UserResolver {
   async changePassword(
     @Arg("token") token: string,
     @Arg("newPassword") newPassword: string,
-    @Ctx() { em, redis, req }: MyContext
+    @Ctx() { redis, req }: MyContext
   ): Promise<UserResponse> {
     //this check is also in the validateRegister. change both together, or abstract
     if (newPassword.length <= 3) {
@@ -69,7 +69,9 @@ export class UserResolver {
       };
     }
 
-    const user = (await em.findOne(User, { id: parseInt(userId) })) as User; //parseint bc redis stores things as strings and our id is an int.
+    const userIdNum = parseInt(userId); //parseint bc redis stores things as strings and our id is an int.
+
+    const user = await User.findOne(userIdNum); //since we are searching by the primery key (id), we don't have to say where
 
     if (!user) {
       return {
@@ -82,8 +84,12 @@ export class UserResolver {
       };
     }
 
-    user.password = await argon2.hash(newPassword);
-    em.persistAndFlush(user);
+    await User.update(
+      { id: userIdNum },
+      {
+        password: await argon2.hash(newPassword)
+      }
+    );
 
     await redis.del(redisKey);
 
@@ -96,9 +102,9 @@ export class UserResolver {
   @Mutation(() => Boolean)
   async forgotPassword(
     @Arg("email") email: string,
-    @Ctx() { em, redis }: MyContext
+    @Ctx() { redis }: MyContext
   ) {
-    const user = (await em.findOne(User, { email })) as User;
+    const user = await User.findOne({ where: { email } }); //since we are not searching by the primery key (id), we have to say where
     if (!user) {
       //the email is not in the db
       return true; //for security reasons, not doing anything, to avoid someone fishing for emails with it
@@ -124,41 +130,43 @@ export class UserResolver {
   }
 
   @Query(() => User, { nullable: true })
-  async me(@Ctx() { req, em }: MyContext) {
+  me(@Ctx() { req }: MyContext) {
     if (!req.session.userId) {
       //this is set in the login. So this is a "if not logged" in check
       return null;
     }
 
-    const user = await em.findOne(User, { id: req.session.userId });
-    return user;
+    return User.findOne(req.session.userId);
   }
 
   @Mutation(() => UserResponse)
   async register(
     @Arg("options") options: UsernamePasswordInput,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
     const errors = validateRegister(options);
     if (errors) return { errors };
 
     const hashedPassword = await argon2.hash(options.password);
     let user;
+
+    // INSERTING WITH THE QUERY BUILDER. YOU CAN COMPARE IT HOW WE INSERT A POST. it could have been made simpler by using User.create({pass here the fields}).save()
     try {
-      const result = await (em as EntityManager)
-        .createQueryBuilder(User)
-        .getKnexQuery()
-        .insert({
+      const result = await getConnection()
+        .createQueryBuilder()
+        .insert()
+        .into(User)
+        .values({
           email: options.email,
           username: options.username,
-          password: hashedPassword,
-          created_at: new Date(),
-          updated_at: new Date()
+          password: hashedPassword
         })
-        .returning("*");
-      user = result[0];
+        .returning("*")
+        .execute();
+
+      user = result.raw[0]; //the InsertResult is an object with an element raw which is an Array, the only element is the user added (you can console log the result and register someone to see it)
     } catch (err) {
-      // these are the errors that the database will throw back if persist and flush fails for some reason.
+      // these are the errors that the database will throw back if the inserting fails (you can console log the err to see it)
       if (err.code === "23505") {
         //|| err.detail.includes("already exists")
         //username already exists in the database
@@ -184,18 +192,18 @@ export class UserResolver {
   async login(
     @Arg("usernameOrEmail") usernameOrEmail: string,
     @Arg("password") password: string,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
-    const user = (await em.findOne(
-      User,
+    const user = await User.findOne(
       usernameOrEmail.includes("@")
         ? {
-            email: usernameOrEmail
+            where: { email: usernameOrEmail }
           }
         : {
-            username: usernameOrEmail
+            where: { username: usernameOrEmail }
           }
-    )) as User;
+    );
+
     if (!user) {
       return {
         errors: [

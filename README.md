@@ -12,6 +12,12 @@ yarn watch
 #Run the javascript inside dist on localhost:4000:
 yarn dev
 
+#Starting redis server
+redis-server
+
+#Create a new database and change it on /src/index.ts (A default user and password is there too)
+createdb NAME
+
 ```
 
 ### Web:
