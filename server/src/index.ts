@@ -26,6 +26,9 @@ const main = async () => {
     entities: [Post, User]
   });
 
+  //deleting all posts. Before running this put synchronize to false (because probably you want to delete all of one entity because of some new collumns created. And what is crashing is synchronization)
+  //await Post.delete({});
+
   const app = express();
 
   const RedisStore = connectRedis(session);
