@@ -1,14 +1,30 @@
-import { dedupExchange, fetchExchange } from "urql";
 import { cacheExchange } from "@urql/exchange-graphcache";
-
+import { dedupExchange, Exchange, fetchExchange } from "urql";
+import { pipe, tap } from "wonka"; //comes with Urql
 import {
-  LogoutMutation,
-  MeQuery,
-  MeDocument,
   LoginMutation,
+  LogoutMutation,
+  MeDocument,
+  MeQuery,
   RegisterMutation
 } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
+import Router from "next/router";
+
+//So, whenever I receive an error message that conteins that string, this will happen. This is happening in the whole application, for everything that happens.
+//Ex.: creating a post gives back an error "user not authenticated" if not logged in, so this will redirect them to the login page.
+const errorExchange: Exchange = ({ forward }) => ops$ => {
+  return pipe(
+    forward(ops$),
+    tap(({ error }) => {
+      if (error && error.message.includes("not authenticated")) {
+        Router.replace("/login");
+        //replace instead of push in the Router is to replace the current route in the history instead of pushing a new entry. It's usually what you wanna do, when you wanna redirect
+        //Router is capital here because we are outside React and not using the hook, but the global router
+      }
+    })
+  );
+};
 
 export const createUrqlClient = (ssrExchange: any) => ({
   url: "http://localhost:4000/graphql",
@@ -67,6 +83,7 @@ export const createUrqlClient = (ssrExchange: any) => ({
         }
       }
     }),
+    errorExchange,
     ssrExchange,
     fetchExchange
   ]

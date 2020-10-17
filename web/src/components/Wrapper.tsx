@@ -1,8 +1,10 @@
 import React from "react";
 import { Box } from "@chakra-ui/core";
 
+export type WrapperVariant = "small" | "regular";
+
 interface WrapperProps {
-  variant?: "small" | "regular"; //taking this prop to control the x size of the form. ? is to make it optional. I am defining a default below.
+  variant?: WrapperVariant; //taking this prop to control the x size of the form. ? is to make it optional. I am defining a default below.
 }
 
 export const Wrapper: React.FC<WrapperProps> = ({
