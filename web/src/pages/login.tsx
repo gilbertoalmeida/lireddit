@@ -24,7 +24,12 @@ const Login: React.FC<{}> = ({}) => {
           if (response.data && response.data.login.errors) {
             setErrors(toErrorMap(response.data.login.errors));
           } else if (response.data && response.data.login.user) {
-            router.push("/");
+            if (typeof router.query.next == "string") {
+              //seeing if it came from a page where they needed to login ad the useIsAuth saved the page in the next query
+              router.push(router.query.next);
+            } else {
+              router.push("/");
+            }
           } else {
             // I created this error for the case that response.data is undefined, which I don't thing will happen, but if it does I want the user to see something, even if it's a general message like server error
             setErrors(
