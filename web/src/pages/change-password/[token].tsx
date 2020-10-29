@@ -4,7 +4,7 @@ import { Wrapper } from "../../components/Wrapper";
 import { Formik, Form } from "formik";
 import { toErrorMap } from "../../utils/toErrorMap";
 import { InputField } from "../../components/InputField";
-import { Button, Box, Link, Flex } from "@chakra-ui/core";
+import { Button, Box, Link } from "@chakra-ui/core";
 import { useChangePasswordMutation } from "../../generated/graphql";
 import { useRouter } from "next/router";
 import { withUrqlClient } from "next-urql";
