@@ -146,6 +146,18 @@ export const createUrqlClient = (ssrExchange: any) => ({
         Mutation: {
           //These things will run whenever the mutations cited here run. With the intent of updating the cache and avoiding things as, user being kept visually not logged in by the behavior of the ui, because urql didn#t update the cache by itself.
 
+          createPost: (_result, args, cache, info) => {
+            //this is similar to what we do at pagination. Here we specifically get all the queries that have posts
+            const allFields = cache.inspectFields("Query");
+            const fieldInfos = allFields.filter(
+              info => info.fieldName === "posts"
+            );
+
+            //looping through all the paginated queries on the page and invalidating them from the cache so that it updates with the new one that was just created
+            fieldInfos.forEach(fi => {
+              cache.invalidate("Query", "posts", fi.arguments || {});
+            });
+          },
           logout: (_result, args, cache, info) => {
             betterUpdateQuery<LogoutMutation, MeQuery>( //updating the MeQuery to show me:null, when Logout Mutation runs.
               cache,
