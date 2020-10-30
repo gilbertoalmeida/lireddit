@@ -53,16 +53,52 @@ export class PostResolver {
     // return Post.find(); // before we were just getting all posts, changed it to pagination and will use the query builder now
     const realLimit = Math.min(50, limit); // the realLimit is the limit passed unless it is more than 50, in this case it is capped at 50.
     const realLimitPlusOne = realLimit + 1; // Fetching 1 more than we need to know if there are more after what we need, to change the Loadmore UI
+
+    const replacements: any[] = [realLimitPlusOne];
+
+    if (cursor) {
+      replacements.push(new Date(parseInt(cursor)));
+    }
+
+    //now when we call posts we are gonna load this single sql that fetches the posts and the user(creator) of the posts.
+    const postsWithOneExtra = await getConnection().query(
+      `
+    select p.*,  
+    json_build_object(
+      'id', u.id,
+      'username', u.username,
+      'email', u.email,
+      'createdAt', u."createdAt",
+      'updatedAt', u."updatedAt"
+      ) creator
+    from post p
+    inner join public.user u on u.id = p."creatorId"
+    ${cursor ? `where p."createdAt" < $2` : ""}
+    order by p."createdAt" DESC
+    limit $1
+    `,
+      replacements //the an array of the things with $number in the query
+    );
+
+    /* 
+Previous used query with the query builder. It was changed for writing sql directly above. Bc a user needed to be fetched for each post as the creator too (with the inner join)
+
+
     const qb = getConnection()
       .getRepository(Post)
       .createQueryBuilder("p") // It's just a regular SQL alias. createQueryBuilder("user") is equivalent to: createQueryBuilder().select("user").from(User, "user")
-      .orderBy('"createdAt"', "DESC") //double quotes so that the internal quote is sent.
+      .orderBy('"createdAt"', "DESC") //double quotes so that the internal quote is sent (camelCase needs it).
       .take(realLimitPlusOne);
     if (cursor) {
-      qb.where('"createdAt" < :cursor', { cursor: new Date(parseInt(cursor)) }); //cursor is the milisecons, we transform it to a int to be able to create a date from it, which is what needs to go to postgressql. What we want to do when we have a cursor is geting all posts after this date. This way we can always get a number of posts after the last one from the last pagination unit
+      qb.where('"createdAt" < :cursor', {
+        cursor: new Date(parseInt(cursor))
+      }); //cursor is the milisecons, we transform it to a int to be able to create a date from it, which is what needs to go to postgressql. What we want to do when we have a cursor is geting all posts after this date. This way we can always get a number of posts after the last one from the last pagination unit
     }
 
     const postsWithOneExtra = await qb.getMany(); //this is what actually executes the sequel.
+    
+ */
+
     const posts = postsWithOneExtra.slice(0, realLimit); //slice returns from index 0 until the one before realLimit. So we are removing the extra one we added just to see if there are more
 
     return {

@@ -33,8 +33,9 @@ export class Post extends BaseEntity {
   @Column()
   creatorId: number;
 
+  @Field()
   @ManyToOne(() => User, user => user.posts)
-  creator: User;
+  creator: User; //this works because the user is an object type and in the posts fetching query we are using innerJoinAndSelect to also fetch the user. so in the query I can ask to return creator {and add here all the field of the creator User that I want}
 
   @Field(() => String)
   @CreateDateColumn()
