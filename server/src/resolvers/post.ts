@@ -16,6 +16,7 @@ import { Post } from "../entities/Post";
 import { MyContext } from "../types";
 import { isAuth } from "../middleware/isAuth";
 import { getConnection } from "typeorm";
+import { Upvote } from "../entities/Upvote";
 
 @InputType()
 class PostInput {
@@ -41,6 +42,44 @@ export class PostResolver {
   ) {
     return root.text.slice(0, 50); //getting a snippet of 50 caracters of the text, to not have to load the whole text when I don't need it.
     //the point of this is that in posts.graphql I will ask for the textSnippet instead of the text. Bc since this query is returning a lot of values and I am not interested in showing the whole text of each one, it's better if I save on the loading.
+  }
+
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async vote(
+    @Arg("postId", () => Int) postId: number,
+    @Arg("value", () => Int) value: number,
+    @Ctx() { req }: MyContext
+  ): Promise<boolean> {
+    //avoiding giving more that an up or down vote
+    const realValue = value > 0 ? 1 : -1;
+
+    const { userId } = req.session;
+
+    /*
+    This is together in a transaction with updating points of a post. The idea being when one fails, both fail.
+    await Upvote.insert({
+      userId,
+      postId,
+      value: realValue
+    }); */
+
+    await getConnection().query(
+      `
+      START TRANSACTION;
+
+      insert into upvote ("userId", "postId", value)
+      values (${userId}, ${postId}, ${realValue});
+
+      update post
+      set points = points + ${realValue}
+      where id = ${postId};
+
+      COMMIT;
+      `
+    );
+
+    return true;
   }
 
   @Query(() => PaginatedPosts)
