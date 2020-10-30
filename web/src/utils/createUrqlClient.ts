@@ -11,10 +11,12 @@ import {
   LogoutMutation,
   MeDocument,
   MeQuery,
-  RegisterMutation
+  RegisterMutation,
+  VoteMutationVariables
 } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
 import Router from "next/router";
+import gql from 'graphql-tag';
 
 //So, whenever I receive an error message that conteins that string, this will happen. This is happening in the whole application, for everything that happens.
 //Ex.: creating a post gives back an error "user not authenticated" if not logged in, so this will redirect them to the login page.
@@ -145,6 +147,43 @@ export const createUrqlClient = (ssrExchange: any) => ({
       updates: {
         Mutation: {
           //These things will run whenever the mutations cited here run. With the intent of updating the cache and avoiding things as, user being kept visually not logged in by the behavior of the ui, because urql didn#t update the cache by itself.
+
+          vote: (_result, args, cache, info) => {
+            const { postId, value } = args as VoteMutationVariables
+
+            //gonna read and update the fragment using these two urql cache functions
+            const data = cache.readFragment(
+              gql`
+                fragment _ on Post {
+                  id
+                  points
+                  voteStatus
+                }
+              `,
+              { id: postId } as any
+            );
+
+            if (data) {
+              if (data.voteStatus === value) {
+                return
+              }
+
+              //new points will be the existing points plus 1 or 2 or minus 1 or 2.
+              //It depends if we are voting for the first time or changing a vote. That's why the ternary operator with the voteStatus. If it was already voted, there's a voteStatus
+              const newPoints = (data.points as number) + (!data.voteStatus ? 1 : 2) * value
+
+              cache.writeFragment(
+                gql`
+                  fragment votingFragment on Post {
+                    points
+                    voteStatus
+                  }
+                `,
+                { id: postId, points: newPoints, voteStatus: value } as any
+              );
+            }
+
+          },
 
           createPost: (_result, args, cache, info) => {
             //this is similar to what we do at pagination. Here we specifically get all the queries that have posts

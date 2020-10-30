@@ -109,7 +109,8 @@ export class PostResolver {
   @Query(() => PaginatedPosts)
   async posts(
     @Arg("limit", () => Int) limit: number,
-    @Arg("cursor", () => String, { nullable: true }) cursor: string | null
+    @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
+    @Ctx() { req }: MyContext
   ): Promise<PaginatedPosts> {
     // await sleep(3000);
     // sleep function is in Utils of src
@@ -117,13 +118,15 @@ export class PostResolver {
     const realLimit = Math.min(50, limit); // the realLimit is the limit passed unless it is more than 50, in this case it is capped at 50.
     const realLimitPlusOne = realLimit + 1; // Fetching 1 more than we need to know if there are more after what we need, to change the Loadmore UI
 
-    const replacements: any[] = [realLimitPlusOne];
+    const replacements: any[] = [realLimitPlusOne, req.session.userId];
 
     if (cursor) {
       replacements.push(new Date(parseInt(cursor)));
     }
 
     //now when we call posts we are gonna load this single sql that fetches the posts and the user(creator) of the posts.
+    //It creates an object called creator with the fields inside, so that it looks like the organization we want.
+    //it also creates the voteStatus by looking in the table upvote if the current user voted in each post and attaches 1, -1 or null. This is usefull for the actions on voting that need to know if the current user already voted or not and how they voted on each post
     const postsWithOneExtra = await getConnection().query(
       `
     select p.*,  
@@ -133,10 +136,14 @@ export class PostResolver {
       'email', u.email,
       'createdAt', u."createdAt",
       'updatedAt', u."updatedAt"
-      ) creator
+      ) creator,
+    ${req.session.userId
+        ? '(select value from upvote where "userId" = $2 and "postId" = p.id) "voteStatus"'
+        : 'null as voteStatus'
+      }
     from post p
     inner join public.user u on u.id = p."creatorId"
-    ${cursor ? `where p."createdAt" < $2` : ""}
+    ${cursor ? `where p."createdAt" < $3` : ""}
     order by p."createdAt" DESC
     limit $1
     `,

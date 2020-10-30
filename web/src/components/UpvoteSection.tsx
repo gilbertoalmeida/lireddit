@@ -13,6 +13,9 @@ export const UpvoteSection: React.FC<UpvoteSectionProps> = ({ post }) => {
     <Flex direction="column" alignItems="center" mr="4">
       <IconButton
         onClick={async () => {
+          if (post.voteStatus === 1) {
+            return
+          }
           setLoadingState("upvoting-loading")
           await vote({
             postId: post.id,
@@ -20,6 +23,7 @@ export const UpvoteSection: React.FC<UpvoteSectionProps> = ({ post }) => {
           })
           setLoadingState("not-loading")
         }}
+        variantColor={post.voteStatus === 1 ? "green" : undefined}
         isLoading={loadingState === "upvoting-loading"}
         aria-label="upvote post"
         icon="chevron-up"
@@ -29,6 +33,9 @@ export const UpvoteSection: React.FC<UpvoteSectionProps> = ({ post }) => {
       <Text lineHeight="1.5">{post.points}</Text>
       <IconButton
         onClick={async () => {
+          if (post.voteStatus === -1) {
+            return
+          }
           setLoadingState("downvoting-loading")
           await vote({
             postId: post.id,
@@ -36,6 +43,7 @@ export const UpvoteSection: React.FC<UpvoteSectionProps> = ({ post }) => {
           })
           setLoadingState("not-loading")
         }}
+        variantColor={post.voteStatus === -1 ? "red" : undefined}
         isLoading={loadingState === "downvoting-loading"}
         aria-label="downvote post"
         icon="chevron-down"
