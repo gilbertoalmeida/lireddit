@@ -16,6 +16,7 @@ import { Post } from "../entities/Post";
 import { MyContext } from "../types";
 import { isAuth } from "../middleware/isAuth";
 import { getConnection } from "typeorm";
+import { Upvote } from "../entities/Upvote";
 
 @InputType()
 class PostInput {
@@ -55,7 +56,30 @@ export class PostResolver {
 
     const { userId } = req.session;
 
-    /*
+    const existingVote = await Upvote.findOne({ where: { postId, userId } })
+
+    if (existingVote && existingVote.value !== realValue) {
+      //they are changing their vote
+
+      await getConnection().transaction(async tm => {
+        await tm.query(`
+          update upvote 
+          set value = $1
+          where "postId" = $2 and "userId" = $3
+        `, [realValue, postId, userId]
+        );
+
+        await tm.query(`
+          update post
+          set points = points + $1
+          where id = $2
+        `, [2 * realValue, postId] //since we are changing the value of the vote we need to sum 2 or subtract 2 to give the effect of changing a vote in the number of points.
+        )
+      })
+
+    } else if (!existingVote) {
+
+      /*
     This is together in a transaction with updating points of a post. The idea being when one fails, both fail.
     await Upvote.insert({
       userId,
@@ -63,20 +87,21 @@ export class PostResolver {
       value: realValue
     }); */
 
-    await getConnection().query(
-      `
-      START TRANSACTION;
+      await getConnection().transaction(async tm => {
+        await tm.query(`
+          insert into upvote ("userId", "postId", value)
+          values ($1, $2, $3)
+        `, [userId, postId, realValue]
+        );
 
-      insert into upvote ("userId", "postId", value)
-      values (${userId}, ${postId}, ${realValue});
-
-      update post
-      set points = points + ${realValue}
-      where id = ${postId};
-
-      COMMIT;
-      `
-    );
+        await tm.query(`
+          update post
+          set points = points + $1
+          where id = $2
+        `, [realValue, postId]
+        )
+      })
+    }
 
     return true;
   }
