@@ -3,16 +3,7 @@ import { createUrqlClient } from "../utils/createUrqlClient";
 import { usePostsQuery } from "../generated/graphql";
 import { Layout } from "../components/Layout";
 import NextLink from "next/link";
-import {
-  Link,
-  Stack,
-  Box,
-  Heading,
-  Text,
-  Flex,
-  Button,
-  IconButton
-} from "@chakra-ui/core";
+import { Link, Stack, Box, Heading, Text, Flex, Button } from "@chakra-ui/core";
 import { useState } from "react";
 import { UpvoteSection } from "../components/UpvoteSection";
 
@@ -44,26 +35,26 @@ const Index = () => {
       {!data && fetching ? (
         <div>loading...</div>
       ) : (
-        <Stack spacing={8}>
-          {/* the ! after data declares that we know it will be defined. So that typescript doesn't give us an error. And we know for sure because of all teh checks we did in the page. If it's not fetching and it is not defined, it will return something else above */}
-          {data!.posts.postsArray.map(p => (
-            <Flex key={p.id} p={5} shadow="md" borderWidth="1px">
-              <UpvoteSection post={p} />
-              <Box>
-                <Heading fontSize="xl">{p.title}</Heading>
-                <Text>Posted by {p.creator.username}</Text>
-                <Text mt={4}>
-                  {p.textSnippet
-                    .trim()
-                    .concat(p.textSnippet.length === 50 ? "..." : "")}
-                </Text>{" "}
-                {/* getting the testSnippet here to not have to load the entire text of each post. The splice in the number of characters is done on the server. textSnippet is part of the Post resolver  */}
-              </Box>
-            </Flex>
-          ))}
-        </Stack>
-      )}
-      {data && data.posts.hasMore ? (
+          <Stack spacing={8}>
+            {/* the ! after data declares that we know it will be defined. So that typescript doesn't give us an error. And we know for sure because of all teh checks we did in the page. If it's not fetching and it is not defined, it will return something else above */}
+            {data!.posts.postsArray.map(p => (
+              <Flex key={p.id} p={5} shadow="md" borderWidth="1px">
+                <UpvoteSection post={p} />
+                <Box>
+                  <Heading fontSize="xl">{p.title}</Heading>
+                  <Text>Posted by {p.creator.username}</Text>
+                  <Text mt={4}>
+                    {p.textSnippet
+                      .trim()
+                      .concat(p.textSnippet.length === 50 ? "..." : "")}
+                  </Text>{" "}
+                  {/* getting the testSnippet here to not have to load the entire text of each post. The splice in the number of characters is done on the server. textSnippet is part of the Post resolver  */}
+                </Box>
+              </Flex>
+            ))}
+          </Stack>
+        )}
+      {data?.posts.hasMore ? (
         <Flex>
           <Button
             onClick={() => {
