@@ -5,7 +5,9 @@ import {
   Arg,
   Ctx,
   ObjectType,
-  Query
+  Query,
+  FieldResolver,
+  Root
 } from "type-graphql";
 import { MyContext } from "../types";
 import { User } from "../entities/User";
@@ -35,8 +37,18 @@ class UserResponse {
   user?: User;
 }
 
-@Resolver()
+@Resolver(User)
 export class UserResolver {
+  @FieldResolver(() => String)
+  email(@Root() user: User, @Ctx() { req }: MyContext) {
+    //the user doing the request is the user being requested, so it's ok to show their email
+    if (req.session.userId === user.id) {
+      return user.email;
+    }
+    //current user seing an empty string for someone else's email
+    return "";
+  }
+
   @Mutation(() => UserResponse) //returning a UserResponse to login the user after they change their password
   async changePassword(
     @Arg("token") token: string,
