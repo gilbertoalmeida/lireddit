@@ -9,7 +9,8 @@ import {
   UseMiddleware,
   Int,
   FieldResolver,
-  Root
+  Root,
+  ObjectType
 } from "type-graphql";
 import { Post } from "../entities/Post";
 import { MyContext } from "../types";
@@ -24,6 +25,14 @@ class PostInput {
   text: string;
 }
 
+@ObjectType()
+class PaginatedPosts {
+  @Field(() => [Post])
+  postsArray: Post[];
+  @Field()
+  hasMore: boolean;
+}
+
 @Resolver(Post)
 export class PostResolver {
   @FieldResolver(() => String)
@@ -34,25 +43,32 @@ export class PostResolver {
     //the point of this is that in posts.graphql I will ask for the textSnippet instead of the text. Bc since this query is returning a lot of values and I am not interested in showing the whole text of each one, it's better if I save on the loading.
   }
 
-  @Query(() => [Post])
+  @Query(() => PaginatedPosts)
   async posts(
     @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string | null
-  ): Promise<Post[]> {
+  ): Promise<PaginatedPosts> {
     // await sleep(3000);
     // sleep function is in Utils of src
     // return Post.find(); // before we were just getting all posts, changed it to pagination and will use the query builder now
-    const realLimit = Math.min(50, limit); // the realLimit is the limit passed unless it is more than 50, in this case it is capped at 50
+    const realLimit = Math.min(50, limit); // the realLimit is the limit passed unless it is more than 50, in this case it is capped at 50.
+    const realLimitPlusOne = realLimit + 1; // Fetching 1 more than we need to know if there are more after what we need, to change the Loadmore UI
     const qb = getConnection()
       .getRepository(Post)
       .createQueryBuilder("p") // It's just a regular SQL alias. createQueryBuilder("user") is equivalent to: createQueryBuilder().select("user").from(User, "user")
       .orderBy('"createdAt"', "DESC") //double quotes so that the internal quote is sent.
-      .take(realLimit);
+      .take(realLimitPlusOne);
     if (cursor) {
       qb.where('"createdAt" < :cursor', { cursor: new Date(parseInt(cursor)) }); //cursor is the milisecons, we transform it to a int to be able to create a date from it, which is what needs to go to postgressql. What we want to do when we have a cursor is geting all posts after this date. This way we can always get a number of posts after the last one from the last pagination unit
     }
 
-    return qb.getMany(); //this is what actually executes the sequel. So we can do all the conditions first and then return it
+    const postsWithOneExtra = await qb.getMany(); //this is what actually executes the sequel.
+    const posts = postsWithOneExtra.slice(0, realLimit); //slice returns from index 0 until the one before realLimit. So we are removing the extra one we added just to see if there are more
+
+    return {
+      postsArray: posts,
+      hasMore: postsWithOneExtra.length === realLimitPlusOne
+    };
   }
 
   @Query(() => Post, { nullable: true })
