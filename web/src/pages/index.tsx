@@ -54,7 +54,7 @@ const Index = () => {
             ))}
           </Stack>
         )}
-      {data?.posts.hasMore ? (
+      {data && data.posts.hasMore ? (
         <Flex>
           <Button
             onClick={() => {

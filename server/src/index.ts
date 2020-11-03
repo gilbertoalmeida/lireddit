@@ -68,8 +68,8 @@ const main = async () => {
 
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [HelloResolver, PostResolver, UserResolver]
-      // validate: false
+      resolvers: [HelloResolver, PostResolver, UserResolver],
+      validate: false
     }),
     context: ({ req, res }) => ({
       //context is an object available to all resolvers. Everything I pass here is available to the resolvers.

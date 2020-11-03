@@ -38,9 +38,9 @@ class PaginatedPosts {
 export class PostResolver {
   @FieldResolver(() => String)
   textSnippet(
-    @Root() root: Post //this is gonna be called everytime we get a Post object
+    @Root() post: Post //this is gonna be called everytime we get a Post object
   ) {
-    return root.text.slice(0, 50); //getting a snippet of 50 caracters of the text, to not have to load the whole text when I don't need it.
+    return post.text.slice(0, 50); //getting a snippet of 50 caracters of the text, to not have to load the whole text when I don't need it.
     //the point of this is that in posts.graphql I will ask for the textSnippet instead of the text. Bc since this query is returning a lot of values and I am not interested in showing the whole text of each one, it's better if I save on the loading.
   }
 
@@ -118,11 +118,19 @@ export class PostResolver {
     const realLimit = Math.min(50, limit); // the realLimit is the limit passed unless it is more than 50, in this case it is capped at 50.
     const realLimitPlusOne = realLimit + 1; // Fetching 1 more than we need to know if there are more after what we need, to change the Loadmore UI
 
-    const replacements: any[] = [realLimitPlusOne, req.session.userId];
+    const replacements: any[] = [realLimitPlusOne];
 
+    if (req.session.userId) {
+      replacements.push(req.session.userId);
+    }
+
+    let cursorIdx = 3
     if (cursor) {
       replacements.push(new Date(parseInt(cursor)));
+      cursorIdx = replacements.length
     }
+
+    //All these if statements above and the and thing are confitions to satisfy the different situations that might happen when the query is calls, which influences the way the replacements are passed to the query. The user might be logged in or not, or the query might have a cursor or not.
 
     //now when we call posts we are gonna load this single sql that fetches the posts and the user(creator) of the posts.
     //It creates an object called creator with the fields inside, so that it looks like the organization we want.
@@ -143,7 +151,7 @@ export class PostResolver {
       }
     from post p
     inner join public.user u on u.id = p."creatorId"
-    ${cursor ? `where p."createdAt" < $3` : ""}
+    ${cursor ? `where p."createdAt" < $${cursorIdx}` : ""}
     order by p."createdAt" DESC
     limit $1
     `,
