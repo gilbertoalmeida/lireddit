@@ -23,14 +23,12 @@ const Index = () => {
   return (
     <Layout>
       <Flex align="center">
-        <Heading>LiReddit</Heading>
+        <Heading>Fala parça!</Heading>
         <NextLink href="create-post">
           <Link ml="auto">create post</Link>
         </NextLink>
       </Flex>
 
-      <br />
-      <div>Fala parça!</div>
       <br />
       {!data && fetching ? (
         <div>loading...</div>
@@ -41,7 +39,12 @@ const Index = () => {
               <Flex key={p.id} p={5} shadow="md" borderWidth="1px">
                 <UpvoteSection post={p} />
                 <Box>
-                  <Heading fontSize="xl">{p.title}</Heading>
+                  <Link>
+                    <NextLink href="/post/[id]" as={`/post/${p.id}`}>
+                      {/* dinamic routs in Next.js you need to name the href as the file name of the page. Ans the as parameter is the real dinamic thing */}
+                      <Heading fontSize="xl">{p.title}</Heading>
+                    </NextLink>
+                  </Link>
                   <Text>Posted by {p.creator.username}</Text>
                   <Text mt={4}>
                     {p.textSnippet

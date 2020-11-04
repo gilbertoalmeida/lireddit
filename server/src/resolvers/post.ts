@@ -134,6 +134,7 @@ export class PostResolver {
 
     //now when we call posts we are gonna load this single sql that fetches the posts and the user(creator) of the posts.
     //It creates an object called creator with the fields inside, so that it looks like the organization we want.
+    // (If the query was simple, there was another way of doing it. See query post below.)
     //it also creates the voteStatus by looking in the table upvote if the current user voted in each post and attaches 1, -1 or null. This is usefull for the actions on voting that need to know if the current user already voted or not and how they voted on each post
     const postsWithOneExtra = await getConnection().query(
       `
@@ -186,8 +187,8 @@ Previous used query with the query builder. It was changed for writing sql direc
   }
 
   @Query(() => Post, { nullable: true })
-  post(@Arg("id") id: number): Promise<Post | undefined> {
-    return Post.findOne(id); //since we are searching by the primery key (id), we don't have to say where
+  post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
+    return Post.findOne(id, { relations: ["creator"] }); //since we are searching by the primery key (id), we don't have to say where. The relations is to left join the user search for the creator of the post. The name "creator" was chosen because this is teh name of the ManyToOne relationship in our Post entity. Since it's just for one post and the sql is simple, graphql manages to do it like this. In the case of out posts query, it was more complicated, so we had to write it ourselves.
   }
 
   @Mutation(() => Post)
