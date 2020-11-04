@@ -21,7 +21,7 @@ import gql from 'graphql-tag';
 import { isServer } from "./isServer";
 
 //So, whenever I receive an error message that conteins that string, this will happen. This is happening in the whole application, for everything that happens.
-//Ex.: creating a post gives back an error "user not authenticated" if not logged in, so this will redirect them to the login page.
+//Ex.: creating a post gives back an error "user not authenticated" (which includes what's written below) if not logged in, so this will redirect them to the login page.
 
 const errorExchange: Exchange = ({ forward }) => ops$ => {
   return pipe(

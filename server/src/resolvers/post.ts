@@ -225,7 +225,20 @@ Previous used query with the query builder. It was changed for writing sql direc
     @Arg("id", () => Int) id: number,
     @Ctx() { req }: MyContext
   ): Promise<boolean> {
-    await Post.delete({ id, creatorId: req.session.userId }); //logged in users can only delete their own posts.
+    const post = await Post.findOne(id)
+
+    if (!post) {
+      return false
+    }
+
+    if (post.creatorId !== req.session.userId) {
+      //users can only delete their own posts.
+      throw new Error("not authorized")
+    }
+
+    await Upvote.delete({ postId: id }) //deleting all the votes from this post. Otherwise it won't let us delete a post with votes.
+    await Post.delete({ id });
+
     return true;
   }
 }
