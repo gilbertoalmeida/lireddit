@@ -1,13 +1,14 @@
 import { withUrqlClient } from "next-urql";
 import { createUrqlClient } from "../utils/createUrqlClient";
-import { usePostsQuery } from "../generated/graphql";
+import { useDeletePostMutation, usePostsQuery } from "../generated/graphql";
 import { Layout } from "../components/Layout";
 import NextLink from "next/link";
-import { Link, Stack, Box, Heading, Text, Flex, Button } from "@chakra-ui/core";
+import { Link, Stack, Box, Heading, Text, Flex, Button, IconButton } from "@chakra-ui/core";
 import { useState } from "react";
 import { UpvoteSection } from "../components/UpvoteSection";
 
 const Index = () => {
+  const [, deletePost] = useDeletePostMutation()
   const [variables, setVariables] = useState({
     limit: 15,
     cursor: null as null | string
@@ -24,9 +25,6 @@ const Index = () => {
     <Layout>
       <Flex align="center">
         <Heading>Fala parça!</Heading>
-        <NextLink href="create-post">
-          <Link ml="auto">create post</Link>
-        </NextLink>
       </Flex>
 
       <br />
@@ -38,7 +36,7 @@ const Index = () => {
             {data!.posts.postsArray.map(p => (
               <Flex key={p.id} p={5} shadow="md" borderWidth="1px">
                 <UpvoteSection post={p} />
-                <Box>
+                <Box flex={1}>
                   <Link>
                     <NextLink href="/post/[id]" as={`/post/${p.id}`}>
                       {/* dinamic routs in Next.js you need to name the href as the file name of the page. Ans the as parameter is the real dinamic thing */}
@@ -46,12 +44,18 @@ const Index = () => {
                     </NextLink>
                   </Link>
                   <Text>Posted by {p.creator.username}</Text>
-                  <Text mt={4}>
-                    {p.textSnippet
-                      .trim()
-                      .concat(p.textSnippet.length === 50 ? "..." : "")}
-                  </Text>{" "}
-                  {/* getting the testSnippet here to not have to load the entire text of each post. The splice in the number of characters is done on the server. textSnippet is part of the Post resolver  */}
+                  <Flex>
+                    <Text flex={1} mt={4}>
+                      {p.textSnippet
+                        .trim()
+                        .concat(p.textSnippet.length === 50 ? "..." : "")}
+                    </Text>{" "}
+                    {/* getting the testSnippet here to not have to load the entire text of each post. The splice in the number of characters is done on the server. textSnippet is part of the Post resolver  */}
+                    <IconButton ml="auto" aria-label="Delete Post" icon="delete" onClick={() => {
+                      deletePost({ id: p.id })
+                    }} />
+                  </Flex>
+
                 </Box>
               </Flex>
             ))}

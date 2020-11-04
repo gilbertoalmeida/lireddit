@@ -220,8 +220,12 @@ Previous used query with the query builder. It was changed for writing sql direc
   }
 
   @Mutation(() => Boolean)
-  async deletePost(@Arg("id") id: number): Promise<boolean> {
-    await Post.delete(id);
+  @UseMiddleware(isAuth) //user has to be logged in
+  async deletePost(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { req }: MyContext
+  ): Promise<boolean> {
+    await Post.delete({ id, creatorId: req.session.userId }); //logged in users can only delete their own posts.
     return true;
   }
 }
