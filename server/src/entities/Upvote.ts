@@ -21,4 +21,15 @@ export class Upvote extends BaseEntity {
 
   @ManyToOne(() => Post, post => post.upvotes)
   post: Post;
+
+  /* 
+  MODIFIED COPY OF THE RELATION ABOVE
+  This is the way you would cascade the deletion of the votes together with the post itself. This way, in the mutation, you just have to delete the post and all the upvotes that have this post will be deleted together.
+  I discuss the possible bad sides of it in the deletePost mutation
+
+  @ManyToOne(() => Post, post => post.upvotes, {
+    onDelete: "CASCADE"
+  })
+  post: Post; 
+  */
 }

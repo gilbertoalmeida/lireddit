@@ -239,6 +239,15 @@ Previous used query with the query builder. It was changed for writing sql direc
     await Upvote.delete({ postId: id }) //deleting all the votes from this post. Otherwise it won't let us delete a post with votes.
     await Post.delete({ id });
 
+    /* 
+      The deletion of the posts Upvotes could also be done by cascading the delete. So here we could only write:
+      await Post.delete({ id, creatorId: req.session.userId });
+      This already checks if the post is from the user and deletes it. The cascading to delete its votes too happens if you specify to cascade on delete in the Upvote entity (See anotation there)
+      Possible bad sides: you forget you are cascading things and delete more than you want in specific situations.
+      You want to send specific errors or returns if you don't find the post or if the user doesn't have authorization.
+      
+    */
+
     return true;
   }
 }
