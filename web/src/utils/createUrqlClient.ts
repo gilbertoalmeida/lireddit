@@ -7,6 +7,7 @@ import {
 } from "urql";
 import { pipe, tap } from "wonka"; //comes with Urql
 import {
+  DeletePostMutationVariables,
   LoginMutation,
   LogoutMutation,
   MeDocument,
@@ -165,6 +166,16 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
         updates: {
           Mutation: {
             //These things will run whenever the mutations cited here run. With the intent of updating the cache and avoiding things as, user being kept visually not logged in by the behavior of the ui, because urql didn#t update the cache by itself.
+
+            deletePost: (_result, args, cache, info) => {
+
+              // this invalidade will make the post become null. So we had to change in the index page how to deal with posts that now might be null. We can't show them there bc it will break the variables from inside a post.
+              cache.invalidate({
+                __typename: "Post",
+                id: (args as DeletePostMutationVariables).id
+              })
+
+            },
 
             vote: (_result, args, cache, info) => {
               const { postId, value } = args as VoteMutationVariables
