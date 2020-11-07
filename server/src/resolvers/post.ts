@@ -205,18 +205,37 @@ Previous used query with the query builder. It was changed for writing sql direc
   }
 
   @Mutation(() => Post, { nullable: true })
+  @UseMiddleware(isAuth)
   async updatePost(
     @Arg("id") id: number,
-    @Arg("title", () => String, { nullable: true }) title: string
+    @Arg("title", { nullable: true }) title: string,
+    @Arg("text", { nullable: true }) text: string,
+    @Ctx() { req }: MyContext
   ): Promise<Post | null> {
+
+    const result = await getConnection()
+      .createQueryBuilder()
+      .update(Post)
+      .set({ title, text })
+      .where('id = :id and "creatorId" = :creatorId', { id, creatorId: req.session.userId })
+      .returning("*")
+      .execute();
+
+    return result.raw[0]
+
+    /* 
+    this is what we wanted to do, but the post in the end is still the old post and update also doesn't return the updated post. So we decided to change to the query builder.
+    
     const post = await Post.findOne(id);
-    if (!post) {
-      return null;
-    }
-    if (typeof title !== "undefined") {
-      await Post.update({ id }, { title });
-    }
-    return post;
+        if (!post) {
+          return null;
+        }
+    
+    await Post.update({ id, req.session.userId }, { title, text });
+    
+    return post
+     */
+
   }
 
   @Mutation(() => Boolean)
