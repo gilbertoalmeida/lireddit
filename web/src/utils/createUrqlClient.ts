@@ -140,7 +140,7 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
   //geting the cookie from the context, so that if we are doing ssr, node.js passes the cookie between the browser and graphql.
   let cookie = ""
   if (isServer()) {
-    cookie = ctx.req.headers.cookie
+    cookie = ctx?.req?.headers?.cookie
   }
 
   return ({
