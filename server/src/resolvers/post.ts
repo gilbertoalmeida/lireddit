@@ -207,7 +207,7 @@ Previous used query with the query builder. It was changed for writing sql direc
   @Mutation(() => Post, { nullable: true })
   @UseMiddleware(isAuth)
   async updatePost(
-    @Arg("id") id: number,
+    @Arg("id", () => Int) id: number,
     @Arg("title", { nullable: true }) title: string,
     @Arg("text", { nullable: true }) text: string,
     @Ctx() { req }: MyContext
