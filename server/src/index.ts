@@ -16,6 +16,7 @@ import { Post } from "./entities/Post";
 import { User } from "./entities/User";
 import path from "path";
 import { Upvote } from "./entities/Upvote";
+import { createUserLoader } from "./Utils/createUserLoader";
 
 const main = async () => {
   const conn = await createConnection({
@@ -76,7 +77,8 @@ const main = async () => {
       //If I add things here, I have to update server/src/types.ts
       req,
       res,
-      redis
+      redis,
+      userLoader: createUserLoader() //runs on every request. So a new userLoader is created on every request. This batches and caches loading of users within a single request
     })
   });
 

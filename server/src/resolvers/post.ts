@@ -17,6 +17,7 @@ import { MyContext } from "../types";
 import { isAuth } from "../middleware/isAuth";
 import { getConnection } from "typeorm";
 import { Upvote } from "../entities/Upvote";
+import { User } from "../entities/User";
 
 @InputType()
 class PostInput {
@@ -42,6 +43,20 @@ export class PostResolver {
   ) {
     return post.text.slice(0, 50); //getting a snippet of 50 caracters of the text, to not have to load the whole text when I don't need it.
     //the point of this is that in posts.graphql I will ask for the textSnippet instead of the text. Bc since this query is returning a lot of values and I am not interested in showing the whole text of each one, it's better if I save on the loading.
+  }
+
+  @FieldResolver(() => User)
+  creator(
+    @Root() post: Post,
+    @Ctx() { userLoader }: MyContext
+  ) {
+    return userLoader.load(post.creatorId) //the function will be called for all posts fetched. So the userLoader is going to batch the user ids and send as array in a single function call (in createUserLoader. check the context in index.)
+    //by the way. It also caches the users. So if on a page we are requesting the same user more than one time, it's one going to be requested once. Which is amazing!! It gets rid of duplicate keys (ids)
+
+    /* 
+    Without using the userLoader from the contex, we could fetch each user like this. But there would be a sql for each post. The userLoader is combining all of them together in one sql
+    return User.findOne(post.creatorId);
+     */
   }
 
   @Mutation(() => Boolean)
@@ -132,6 +147,27 @@ export class PostResolver {
 
     //All these if statements above and the and thing are confitions to satisfy the different situations that might happen when the query is calls, which influences the way the replacements are passed to the query. The user might be logged in or not, or the query might have a cursor or not.
 
+    //In this possibility, we removed the json object builder and the inner join, bc we are using the field resolver from above that everytime a post is fetched, it fetches a user as creator too. (similar to how we did the textSnippet)
+    //For every post fetched, it is resolving the field creator written above. (beginning of the resolver)
+    //if you checked the logs of the server, you could see that a User query is written for every post fetched. Which is an overkill (n + 1 problem). So we will use the dataloader library to solve this
+    const postsWithOneExtra = await getConnection().query(
+      `
+    select p.*,  
+    ${req.session.userId
+        ? '(select value from upvote where "userId" = $2 and "postId" = p.id) "voteStatus"'
+        : 'null as voteStatus'
+      }
+    from post p
+    ${cursor ? `where p."createdAt" < $${cursorIdx}` : ""}
+    order by p."createdAt" DESC
+    limit $1
+    `,
+      replacements //the an array of the things with $number in the query
+    );
+
+
+    /* 
+    POSSIBILITY 2:
     //now when we call posts we are gonna load this single sql that fetches the posts and the user(creator) of the posts.
     //It creates an object called creator with the fields inside, so that it looks like the organization we want.
     // (If the query was simple, there was another way of doing it. See query post below.)
@@ -158,8 +194,11 @@ export class PostResolver {
     `,
       replacements //the an array of the things with $number in the query
     );
+ */
+
 
     /* 
+    POSSIBILITY 3:
 Previous used query with the query builder. It was changed for writing sql directly above. Bc a user needed to be fetched for each post as the creator too (with the inner join)
 
 
@@ -188,7 +227,11 @@ Previous used query with the query builder. It was changed for writing sql direc
 
   @Query(() => Post, { nullable: true })
   post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
+    return Post.findOne(id);
+    /* 
+    FOR POSSIBILITY 2:
     return Post.findOne(id, { relations: ["creator"] }); //since we are searching by the primery key (id), we don't have to say where. The relations is to left join the user search for the creator of the post. The name "creator" was chosen because this is teh name of the ManyToOne relationship in our Post entity. Since it's just for one post and the sql is simple, graphql manages to do it like this. In the case of out posts query, it was more complicated, so we had to write it ourselves.
+    */
   }
 
   @Mutation(() => Post)
