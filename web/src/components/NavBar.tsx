@@ -1,13 +1,15 @@
 import React from "react";
 import { Box, Link, Flex, Button, Heading } from "@chakra-ui/core";
-import NextLink from "next/link";
 import { useMeQuery, useLogoutMutation } from "../generated/graphql";
 import { isServer } from "../utils/isServer";
+import NextLink from "next/link";
+import { useRouter } from "next/router";
 //NextLink uses client side routering, which is the purpose we are using instead of normal anchors
 
 interface NavBarProps { }
 
 export const NavBar: React.FC<NavBarProps> = ({ }) => {
+  const router = useRouter()
   const [{ fetching: logoutFetching }, logout] = useLogoutMutation();
   const [{ data, fetching }] = useMeQuery({
     // this pause makes the query not run. The intention here is not run it if we are on server side rendering, bc having the user in the navbar is not useful for google searches. And we don't want this query happening in the server when we do ssr. It would return null anyway because it won't have a cookie in the server
@@ -43,8 +45,9 @@ export const NavBar: React.FC<NavBarProps> = ({ }) => {
           {data.me.username}
         </Box>
         <Button
-          onClick={() => {
-            logout();
+          onClick={async () => {
+            await logout();
+            router.reload()
           }}
           isLoading={logoutFetching}
           variant="link"
