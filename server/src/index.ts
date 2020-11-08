@@ -17,6 +17,7 @@ import { User } from "./entities/User";
 import path from "path";
 import { Upvote } from "./entities/Upvote";
 import { createUserLoader } from "./Utils/createUserLoader";
+import { createUpvoteLoader } from "./Utils/createUpvoteLoader";
 
 const main = async () => {
   const conn = await createConnection({
@@ -78,7 +79,8 @@ const main = async () => {
       req,
       res,
       redis,
-      userLoader: createUserLoader() //runs on every request. So a new userLoader is created on every request. This batches and caches loading of users within a single request
+      userLoader: createUserLoader(), //runs on every request. So a new userLoader is created on every request. This batches and caches loading of users within a single request
+      upvoteLoader: createUpvoteLoader()
     })
   });
 

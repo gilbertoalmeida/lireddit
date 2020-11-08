@@ -59,6 +59,20 @@ export class PostResolver {
      */
   }
 
+  @FieldResolver(() => Int, { nullable: true })
+  async voteStatus(
+    @Root() post: Post,
+    @Ctx() { upvoteLoader, req }: MyContext
+  ) {
+    if (!req.session.userId) {
+      return null
+    }
+    const upvote = await upvoteLoader.load({ postId: post.id, userId: req.session.userId })
+
+    //if we don't find an upvote that means they haven#t voted, so it's null. Otherwise it's 1 or -1
+    return upvote ? upvote.value : null
+  }
+
   @Mutation(() => Boolean)
   @UseMiddleware(isAuth)
   async vote(
@@ -135,30 +149,34 @@ export class PostResolver {
 
     const replacements: any[] = [realLimitPlusOne];
 
+    /* 
+    WITH POSSIBILITY 2:
+
     if (req.session.userId) {
       replacements.push(req.session.userId);
     }
-
+    
     let cursorIdx = 3
     if (cursor) {
       replacements.push(new Date(parseInt(cursor)));
       cursorIdx = replacements.length
     }
+     */
+
+    if (cursor) {
+      replacements.push(new Date(parseInt(cursor)));
+    }
 
     //All these if statements above and the and thing are confitions to satisfy the different situations that might happen when the query is calls, which influences the way the replacements are passed to the query. The user might be logged in or not, or the query might have a cursor or not.
 
-    //In this possibility, we removed the json object builder and the inner join, bc we are using the field resolver from above that everytime a post is fetched, it fetches a user as creator too. (similar to how we did the textSnippet)
-    //For every post fetched, it is resolving the field creator written above. (beginning of the resolver)
-    //if you checked the logs of the server, you could see that a User query is written for every post fetched. Which is an overkill (n + 1 problem). So we will use the dataloader library to solve this
+    //In this possibility, we removed the json object builder and the inner join, and the upvote things, bc we are using the 2 field resolvers from above that everytime a post is fetched, it fetches a user as creator and the upvotes too. (similar to how we did the textSnippet)
+    //For every post fetched, it is resolving the field creator and the voteStatus written above. (beginning of the resolver)
+    //if you checked the logs of the server, you could see that a User query is written for every post fetched. Which is an overkill (n + 1 problem). So we will use the dataloader library to solve this. (Similar thing for the upvotes)
     const postsWithOneExtra = await getConnection().query(
       `
-    select p.*,  
-    ${req.session.userId
-        ? '(select value from upvote where "userId" = $2 and "postId" = p.id) "voteStatus"'
-        : 'null as voteStatus'
-      }
+    select p.*
     from post p
-    ${cursor ? `where p."createdAt" < $${cursorIdx}` : ""}
+    ${cursor ? `where p."createdAt" < $2` : ""}
     order by p."createdAt" DESC
     limit $1
     `,
