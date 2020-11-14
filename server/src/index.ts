@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import "dotenv/config";
+import "dotenv-safe/config";
 import { __prod__, COOKIE_NAME } from "./constants";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
@@ -22,11 +22,9 @@ import { createUpvoteLoader } from "./Utils/createUpvoteLoader";
 const main = async () => {
   const conn = await createConnection({
     type: "postgres",
-    database: "lireddit2",
-    username: "postgres",
-    password: "postgres",
+    url: process.env.DATABASE_URL,
     logging: true,
-    synchronize: true, //creates the tables automaticaly and you don't have to run a migration
+    synchronize: !__prod__, //creates the tables automaticaly and you don't have to run a migration. We don't want it in prod, bc we want to be specific about the tables
     migrations: [path.join(__dirname, "./migrations/*")],
     entities: [Post, User, Upvote]
   });
@@ -39,11 +37,12 @@ const main = async () => {
   const app = express();
 
   const RedisStore = connectRedis(session);
-  const redis = new Redis();
+  const redis = new Redis(process.env.REDIS_URL);
+  app.set("trust proxy", 1)
 
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: process.env.CORS_ORIGIN,
       credentials: true
     })
   );
@@ -60,10 +59,11 @@ const main = async () => {
         maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10 years in miliseconds
         httpOnly: true, // in the javascript code in the frontend, you cannot access the cookie. (for security reasons)
         sameSite: "lax", // protecting csrf (Cross-site request forgery)
-        secure: __prod__ // If in prod, cookie only works in https
+        secure: __prod__, // If in prod, cookie only works in https
+        domain: __prod__ ? ".cribswap.de" : undefined //just add this line with your real domain if you have problems with cookie redirects
       },
       saveUninitialized: false, // don't create a cookie for the user until we store some data on the session (login successful of login resolver)
-      secret: process.env.SESSION_SECRET as string, //create environmental variable for this secret
+      secret: process.env.SESSION_SECRET,
       resave: false // doesn't resave the session everytime the server is hit with a request
     })
   );
@@ -86,7 +86,7 @@ const main = async () => {
 
   apolloServer.applyMiddleware({ app, cors: false }); //turning the default cors of appolo to false, we add our own
 
-  app.listen(4000, () => {
+  app.listen(parseInt(process.env.PORT), () => {
     console.log("server started on localhost:4000");
   });
 };

@@ -3,7 +3,7 @@ import { withUrqlClient } from "next-urql";
 import { Layout } from "../../components/Layout";
 import { createUrqlClient } from "../../utils/createUrqlClient";
 import { Box, Flex, Heading } from "@chakra-ui/core";
-import { useGetPostFromUrl } from "../../utils/useGetPostFromURL";
+import { useGetPostFromUrl } from "../../utils/useGetPostFromUrl";
 import { EditDeletePostButtons } from "../../components/EditDeletePostButtons";
 import { useMeQuery } from "../../generated/graphql";
 
